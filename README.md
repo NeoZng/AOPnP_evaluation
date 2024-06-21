@@ -1,12 +1,18 @@
 # PnP_evaluation
 
-This is a repo forked from VINS-Fusion, modified for the purpose of evaluating PnP-based stereo vision odometry.
+This is a repo forked from [VINS-Fusion](https://github.com/HKUST-Aerial-Robotics/VINS-Fusion), modified for the purpose of evaluating PnP-based stereo vision odometry.
 
 The repo has been tested under Ubuntu20.04 + ROS noetic.
 
 We provide evaluation script for quick start.
 
-MLPnP(implement in [OpenGV](https://www.ipf.kit.edu/english/code_1840.php)), SQPnP and IterativePnP(based on reprojection error nonlinear optimization) are implemented in OpenCV, and the method we propse as AOPnP.
+MLPnP(implement in [OpenGV](https://www.ipf.kit.edu/english/code_1840.php)), SQPnP and IterativePnP(based on reprojection error nonlinear optimization) are implemented in OpenCV, and the method we propse as AOPnP, which is adopted from [CPnP](https://github.com/bereze/CPnP-cpp-version.)
+
+Results on EuRoC dataset has been tested.
+
+To change PnP solver, go to `FeatureManager::initFramePoseByPnP()`. 
+
+Modify the output path in `config.json`. The inlier number per frame, solving time of the solver, pose in euroc format will be output to the dir you assign in config.
 
 ## Dependency
 
@@ -29,6 +35,8 @@ If this is helpful, cite this paper:
 ```
 
 belows are the original vins-fusion readme.
+
+Mono+IMU and Stereo+IMU related contents have been deleted.
 
 ---
 

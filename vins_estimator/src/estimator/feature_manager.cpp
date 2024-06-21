@@ -134,50 +134,6 @@ void FeatureManager::triangulatePoint(Eigen::Matrix<double, 3, 4> &Pose0, Eigen:
 }
 
 
-bool FeatureManager::solvePoseByPnP(Eigen::Matrix3d &R, Eigen::Vector3d &P, 
-                                      vector<cv::Point2f> &pts2D, vector<cv::Point3f> &pts3D)
-{
-    Eigen::Matrix3d R_initial;
-    Eigen::Vector3d P_initial;
-
-    // w_T_cam ---> cam_T_w 
-    R_initial = R.inverse();
-    P_initial = -(R_initial * P);
-
-    //printf("pnp size %d \n",(int)pts2D.size() );
-    if (int(pts2D.size()) < 4)
-    {
-        printf("feature tracking not enough, please slowly move you device! \n");
-        return false;
-    }
-    cv::Mat r, rvec, t, D, tmp_r;
-    cv::eigen2cv(R_initial, tmp_r);
-    cv::Rodrigues(tmp_r, rvec);
-    cv::eigen2cv(P_initial, t);
-    cv::Mat K = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);  
-    bool pnp_succ;
-    pnp_succ = cv::solvePnP(pts3D, pts2D, K, D, rvec, t, 1);
-    // pnp_succ = cv::solvePnPRansac(pts3D, pts2D, K, D, rvec, t, true, 100, 8.0 / focalLength, 0.99, inliers);
-
-    if(!pnp_succ)
-    {
-        printf("pnp failed ! \n");
-        return false;
-    }
-    cv::Rodrigues(rvec, r);
-    //cout << "r " << endl << r << endl;
-    Eigen::MatrixXd R_pnp;
-    cv::cv2eigen(r, R_pnp);
-    Eigen::MatrixXd T_pnp;
-    cv::cv2eigen(t, T_pnp);
-
-    // cam_T_w ---> w_T_cam
-    R = R_pnp.transpose();
-    P = R * (-T_pnp);
-
-    return true;
-}
-
 void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs[], Vector3d tic[], Matrix3d ric[],double header_time)
 {
     if(frameCnt > 0)
