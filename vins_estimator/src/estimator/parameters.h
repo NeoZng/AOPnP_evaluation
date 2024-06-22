@@ -21,9 +21,7 @@
 using namespace std;
 
 const double FOCAL_LENGTH = 460.0;
-const int WINDOW_SIZE = 5;
-const int NUM_OF_F = 2000;
-//#define UNIT_SPHERE_ERROR
+const int WINDOW_SIZE = 10;
 
 extern double INIT_DEPTH;
 extern double MIN_PARALLAX;

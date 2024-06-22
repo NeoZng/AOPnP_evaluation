@@ -42,10 +42,8 @@ class Estimator
 
     // internal
     void clearState();
-    bool relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l);
     void slideWindow();
     void slideWindowOld();
-    void optimization();
     bool failureDetection();
 
     void getPoseInWorldFrame(Eigen::Matrix4d &T);
@@ -63,12 +61,6 @@ class Estimator
         NON_LINEAR
     };
 
-    enum MarginalizationFlag
-    {
-        MARGIN_OLD = 0,
-        MARGIN_SECOND_NEW = 1
-    };
-
     std::mutex mProcess;
     std::mutex mBuf;
     std::mutex mPropagate;
@@ -82,7 +74,6 @@ class Estimator
     FeatureTracker featureTracker;
 
     SolverFlag solver_flag;
-    MarginalizationFlag  marginalization_flag;
     Vector3d g;
 
     Matrix3d ric[2];

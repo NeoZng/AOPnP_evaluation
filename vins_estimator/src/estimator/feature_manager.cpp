@@ -67,7 +67,7 @@ int FeatureManager::getFeatureCount()
 }
 
 
-bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, double td)
+void FeatureManager::addFeatureToIdPts(int frame_count, const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, double td)
 {
     ROS_DEBUG("input feature: %d", (int)image.size());
     ROS_DEBUG("num of feature: %d", getFeatureCount());
@@ -146,12 +146,13 @@ void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs
         epts_norm_2d.reserve(1500);
         pts3D.reserve(1500);
         epts_3d.reserve(1500);
-        epts_2d.reserve(1500);
+         epts_2d.reserve(1500);
 
         for (auto &it_per_id : feature)
         {
             if (it_per_id.estimated_depth > 0)
             {
+                // 青睐多帧观测的特征点
                 int index = frameCnt - it_per_id.start_frame;
                 if((int)it_per_id.feature_per_frame.size() >= index + 1)
                 {
@@ -169,24 +170,16 @@ void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs
                 }
             }
         }
-        // SolvePnPRansac
+
+
         Eigen::Matrix3d RCam;
         Eigen::Vector3d PCam;
-        // trans to w_T_cam
-        RCam = Rs[frameCnt - 1] * ric[0];
-        PCam = Rs[frameCnt - 1] * tic[0] + Ps[frameCnt - 1];
 
-        cv::Mat R_cv, rvec, tvec;
-        cv::eigen2cv(RCam, R_cv);
-        R_cv = R_cv.t();
-        cv::Rodrigues(R_cv, rvec);
-        cv::eigen2cv(PCam, tvec);
-        tvec = -R_cv*tvec;        
+        cv::Mat R_cv, rvec, tvec;    
 
         std::vector<int> inliers;
         cv::Mat cam_mat = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);  
-        // if(solvePoseByPnP(RCam, PCam, pts2D, pts3D))
-        if(cv::solvePnPRansac(pts3D, pts2D, cam_mat, cv::noArray(), rvec, tvec, false, 2000, 0.05, 0.99, inliers, cv::SOLVEPNP_ITERATIVE)) 
+        if(cv::solvePnPRansac(pts3D, pts2D, cam_mat, cv::noArray(), rvec, tvec, false, 2000, 0.05, 0.995, inliers, cv::SOLVEPNP_ITERATIVE)) 
         {
             
             // Filter epts_3d and epts_2d based on inliers  
@@ -197,6 +190,7 @@ void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs
             filtered_epts_2d.reserve(inliers.size());
             filter_norm.reserve(inliers.size());
             filtered_epts_3d.reserve(inliers.size());
+//             inliers保存了inlier的索引(不是mask!)
             for (int idx : inliers) {
                 filtered_epts_3d.emplace_back(epts_3d[idx]);
                 filtered_epts_2d.emplace_back(epts_2d[idx]);
@@ -217,37 +211,35 @@ void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs
             // cv::Rodrigues(rvec, R_cv);
             // cv::cv2eigen(R_cv,RCam);
             // cv::cv2eigen(tvec,PCam);
-            // RCam.transposeInPlace();
-            // PCam = -RCam * PCam;
-            // R_i_sq = RCam * ric[0].transpose(); 
-            // P_i_sq = -RCam * ric[0].transpose() * tic[0] + PCam;
-
+            
             // iterative
             // cv::solvePnP(cvp3, cvp2, cam_mat, cv::noArray(), rvec, tvec, false, cv::SOLVEPNP_ITERATIVE);
             // cv::Rodrigues(rvec, R_cv);
             // cv::cv2eigen(R_cv,RCam);
             // cv::cv2eigen(tvec,PCam);
-            // RCam.transposeInPlace();
-            // PCam = -RCam * PCam;
-            // R_i_sq = RCam * ric[0].transpose(); 
-            // P_i_sq = -RCam * ric[0].transpose() * tic[0] + PCam;
 
             // CPnP
             pnpsolver::CPnP(filtered_epts_2d, filtered_epts_3d, CAM_PARAM, RCam, PCam);
+
+            // 转换到i到i+1坐标系下, opencv的solvePnP是将3D点(cam_i)转到相机坐标系下的(cam_i+1)
+            // 里程计的转换相反
             RCam.transposeInPlace();
             PCam = -RCam * PCam;
+            // 转到世界坐标系下
+            R_i_sq = RCam * ric[0].transpose(); 
+            P_i_sq = -RCam * ric[0].transpose() * tic[0] + PCam;
 
-            // MLPnP
+            // MLPnP, 点数必须大于6否则触发exception.
             // if(inliers.size()>6)
             // {
             //     opengv::absolute_pose::CentralAbsoluteAdapter ad(filter_norm,filtered_epts_3d);
             //     opengv::transformation_t pose = opengv::absolute_pose::mlpnp(ad);
             //     RCam = pose.block<3, 3>(0, 0);
             //     PCam = pose.block<3, 1>(0, 3);
-            R_i_sq = RCam * ric[0].transpose(); 
-            P_i_sq = -RCam * ric[0].transpose() * tic[0] + PCam;
+            // R_i_sq = RCam * ric[0].transpose(); 
+            // P_i_sq = -RCam * ric[0].transpose() * tic[0] + PCam;
             // }
-            // else
+            // else // 小于6直接用上一帧的位姿
             // {
             //     R_i_sq = Rs[frameCnt - 1];
             //     P_i_sq = Ps[frameCnt - 1];
@@ -266,10 +258,6 @@ void FeatureManager::initFramePoseByPnP(int frameCnt, Vector3d Ps[], Matrix3d Rs
 
             Rs[frameCnt] = R_i_sq;
             Ps[frameCnt] = P_i_sq;
-
-            // std::cout << "[cv]:" << PCam.transpose() << std::endl;
-            // std::cout << "[mlpnp]:" << P_i.transpose() << std::endl;
-            // trans to w_T_imu
         }
     }
 }
@@ -346,7 +334,7 @@ void FeatureManager::triangulate(int frameCnt, Vector3d Ps[], Matrix3d Rs[], Vec
                 it_per_id.estimated_depth = INIT_DEPTH;
             continue;
         }
-
+/*---------------------------------------------------------------------------------------------*/
         // 实际上如果多帧都观测到了该点, 则可以使用SVD求最小二乘解, 不过这里没用
         // 这是open-vins的做法
         it_per_id.used_num = it_per_id.feature_per_frame.size();
@@ -440,13 +428,6 @@ void FeatureManager::removeBackShiftDepth(Eigen::Matrix3d marg_R, Eigen::Vector3
                     it->estimated_depth = INIT_DEPTH;
             }
         }
-        // remove tracking-lost feature after marginalize
-        /*
-        if (it->endFrame() < WINDOW_SIZE - 1)
-        {
-            feature.erase(it);
-        }
-        */
     }
 }
 
@@ -466,61 +447,4 @@ void FeatureManager::removeBack()
                 feature.erase(it);
         }
     }
-}
-
-void FeatureManager::removeFront(int frame_count)
-{
-    for (auto it = feature.begin(), it_next = feature.begin(); it != feature.end(); it = it_next)
-    {
-        it_next++;
-
-        if (it->start_frame == frame_count)
-        {
-            it->start_frame--;
-        }
-        else
-        {
-            int j = WINDOW_SIZE - 1 - it->start_frame;
-            if (it->endFrame() < frame_count - 1)
-                continue;
-            it->feature_per_frame.erase(it->feature_per_frame.begin() + j);
-            if (it->feature_per_frame.size() == 0)
-                feature.erase(it);
-        }
-    }
-}
-
-double FeatureManager::compensatedParallax2(const FeaturePerId &it_per_id, int frame_count)
-{
-    //check the second last frame is keyframe or not
-    //parallax betwwen seconde last frame and third last frame
-    const FeaturePerFrame &frame_i = it_per_id.feature_per_frame[frame_count - 2 - it_per_id.start_frame];
-    const FeaturePerFrame &frame_j = it_per_id.feature_per_frame[frame_count - 1 - it_per_id.start_frame];
-
-    double ans = 0;
-    Vector3d p_j = frame_j.point;
-
-    double u_j = p_j(0);
-    double v_j = p_j(1);
-
-    Vector3d p_i = frame_i.point;
-    Vector3d p_i_comp;
-
-    //int r_i = frame_count - 2;
-    //int r_j = frame_count - 1;
-    //p_i_comp = ric[camera_id_j].transpose() * Rs[r_j].transpose() * Rs[r_i] * ric[camera_id_i] * p_i;
-    p_i_comp = p_i;
-    double dep_i = p_i(2);
-    double u_i = p_i(0) / dep_i;
-    double v_i = p_i(1) / dep_i;
-    double du = u_i - u_j, dv = v_i - v_j;
-
-    double dep_i_comp = p_i_comp(2);
-    double u_i_comp = p_i_comp(0) / dep_i_comp;
-    double v_i_comp = p_i_comp(1) / dep_i_comp;
-    double du_comp = u_i_comp - u_j, dv_comp = v_i_comp - v_j;
-
-    ans = max(ans, sqrt(min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp)));
-
-    return ans;
 }

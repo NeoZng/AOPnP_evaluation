@@ -12,7 +12,7 @@ Results on EuRoC dataset has been tested.
 
 To change PnP solver, go to `FeatureManager::initFramePoseByPnP()`. 
 
-Modify the output path in `config.json`. The inlier number per frame, solving time of the solver, pose in euroc format will be output to the dir you assign in config.
+Modify the output path in `config.json`. The inlier number per frame, solving time of the solver, pose in euroc format will be output to the dir you assign in config. You should manaully remove those `.csv` file every time after you run the program.
 
 ## Dependency
 

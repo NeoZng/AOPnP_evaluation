@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vins)
 
-set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++14")
 #-DEIGEN_USE_MKL_ALL")
 # if you want to use MKL, uncomment the above line and make sure you have set the MKLROOT environment variable
 
 # -Ofast -march=native -flto can improve our performance(AOPnP) for Eigen
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g ") # remove -g to improve performance, add -pg to enable profiling
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall") # remove -g to improve performance, add -pg to enable profiling
 set(cmake_export_compile_commands True)
 
 

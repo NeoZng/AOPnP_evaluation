@@ -197,8 +197,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 
     // 注意是双目,所以这里image有2个图像(+特征点)信息
     // 更新持续追踪的特征点,并且添加新的特征点
-    f_manager.addFeatureCheckParallax(frame_count, image, 0) ;
-
+    f_manager.addFeatureToIdPts(frame_count, image, 0);
     ROS_DEBUG("Solving %d", frame_count);
     ROS_DEBUG("number of feature: %d", f_manager.getFeatureCount());
     Headers[frame_count] = header;
@@ -211,6 +210,14 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         f_manager.initFramePoseByPnP(frame_count, Ps, Rs, tic, ric, header);
         f_manager.triangulate(frame_count, Ps, Rs, tic, ric);
 
+        if(frame_count == WINDOW_SIZE)
+        {
+            updateLatestStates();
+            solver_flag = NON_LINEAR;
+            slideWindow();
+            ROS_INFO("Initialization finish!");
+        }
+
         if(frame_count < WINDOW_SIZE)
         {
             frame_count++;
@@ -218,14 +225,6 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             Ps[frame_count] = Ps[prev_frame];
             Vs[frame_count] = Vs[prev_frame];
             Rs[frame_count] = Rs[prev_frame];
-        }
-
-        if(frame_count == WINDOW_SIZE)
-        {
-            updateLatestStates();
-            solver_flag = NON_LINEAR;
-            slideWindow();
-            ROS_INFO("Initialization finish!");
         }
     }
     else // 有足够的3d点了
@@ -240,8 +239,8 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         set<int> removeIndex;
         outliersRejection(removeIndex); 
         f_manager.removeOutlier(removeIndex);
-        featureTracker.removeOutliers(removeIndex); // 不再跟踪误差较大的点
-        predictPtsInNextFrame(); // 利用匀速模型预测下一帧的特征点位置
+        // featureTracker.removeOutliers(removeIndex); // 不再跟踪误差较大的点
+        // predictPtsInNextFrame(); // 利用匀速模型预测下一帧的特征点位置
 
         ROS_DEBUG("solver costs: %fms", t_solve.toc());
 
@@ -306,28 +305,30 @@ bool Estimator::failureDetection()
 void Estimator::slideWindow()
 {
     TicToc t_margin;
-
     double t_0 = Headers[0];
     back_R0 = Rs[0];
     back_P0 = Ps[0];
-
-    for (int i = 0; i < WINDOW_SIZE; i++)
+    if (frame_count == WINDOW_SIZE)
     {
-        Headers[i] = Headers[i + 1];
-        Rs[i].swap(Rs[i + 1]);
-        Ps[i].swap(Ps[i + 1]);
-    }
-    Headers[WINDOW_SIZE] = Headers[WINDOW_SIZE - 1];
-    Ps[WINDOW_SIZE] = Ps[WINDOW_SIZE - 1];
-    Rs[WINDOW_SIZE] = Rs[WINDOW_SIZE - 1];
+        for (int i = 0; i < WINDOW_SIZE; i++)
+        {
+            Headers[i] = Headers[i + 1];
+            Rs[i].swap(Rs[i + 1]);
+            Ps[i].swap(Ps[i + 1]);
+        }
+        Headers[WINDOW_SIZE] = Headers[WINDOW_SIZE - 1];
+        Ps[WINDOW_SIZE] = Ps[WINDOW_SIZE - 1];
+        Rs[WINDOW_SIZE] = Rs[WINDOW_SIZE - 1];
 
-    if (true || solver_flag == INITIAL)
-    {
-        map<double, ImageFrame>::iterator it_0;
-        it_0 = all_image_frame.find(t_0);
-        all_image_frame.erase(all_image_frame.begin(), it_0);
+        if (true || solver_flag == INITIAL)
+        {
+            map<double, ImageFrame>::iterator it_0;
+            it_0 = all_image_frame.find(t_0);
+            all_image_frame.erase(all_image_frame.begin(), it_0);
+        }
+        slideWindowOld();
     }
-    slideWindowOld();
+    
 }
 
 void Estimator::slideWindowOld()

@@ -42,12 +42,11 @@ public:
     void readIntrinsicParameter(const vector<string> &calib_file);
     void showUndistortion(const string &name);
     void rejectWithF();
-    void undistortedPoints();
+
     vector<cv::Point2f> undistortedPts(vector<cv::Point2f> &pts, camodocal::CameraPtr cam);
     vector<cv::Point2f> ptsVelocity(vector<int> &ids, vector<cv::Point2f> &pts, 
                                     map<int, cv::Point2f> &cur_id_pts, map<int, cv::Point2f> &prev_id_pts);
-    void showTwoImage(const cv::Mat &img1, const cv::Mat &img2, 
-                      vector<cv::Point2f> pts1, vector<cv::Point2f> pts2);
+
     void drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight, 
                                    vector<int> &curLeftIds,
                                    vector<cv::Point2f> &curLeftPts, 
