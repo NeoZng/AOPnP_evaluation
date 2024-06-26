@@ -9,3 +9,10 @@ evo_res m.zip c.zip i.zip s.zip --use_filenames --save_table ra.csv
 evo_res mt.zip ct.zip it.zip st.zip --use_filenames --save_table T.csv
 evo_res mr.zip cr.zip ir.zip sr.zip --use_filenames --save_table R.csv
 evo_res mAPE.zip cAPE.zip iAPE.zip sAPE.zip --use_filenames --save_table APE.csv
+
+rm IP*
+evo_res *.tum.zip -p
+evo_res *.tumr.zip -p
+evo_res *.tumt.zip -p
+evo_res *APE.zip -p
+evo_traj tum AOPnP.tum MLPnP.tum SQPnP.tum --align --ref=GT.tum -p

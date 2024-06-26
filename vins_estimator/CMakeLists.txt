@@ -18,12 +18,13 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(OpenGV_LIBS "/home/neo/test/opengv/build/lib/libopengv.a")
 include_directories("/home/neo/test/opengv/include")
 
-find_package(Eigen3 REQUIRED)
-
 # set your opencv dir here, make sure its version is higher than 4.5!!!!!!!
 set(OpenCV_DIR "/usr/local/share/OpenCV")
 find_package(OpenCV REQUIRED)
 message(STATUS "OpenCV version: ${OpenCV_VERSION}")
+
+set(Eigen3_DIR "/usr/lib/cmake/eigen3")
+find_package(Eigen3 REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
     roscpp

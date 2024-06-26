@@ -6,4 +6,4 @@ mv CPnP.tum AOPnP.tum;
 
 evo_res *APE.zip -p
 
-evo_traj tum AOPnP.tum IPnP.tum MLPnP.tum SQPnP.tum --align --ref=data.tum -p
+evo_traj tum AOPnP.tum MLPnP.tum SQPnP.tum --align --ref=data.tum -p
